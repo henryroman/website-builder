@@ -158,8 +158,8 @@ export default function WebsiteBuilder() {
       const result = await response.json()
       
       toast({
-        title: "Website Generation Started",
-        description: "Your website is being generated. You'll receive an email when it's ready.",
+        title: "Information Submitted Successfully",
+        description: "Your business information has been saved to our database and sent for processing.",
       })
 
       // Reset forms
@@ -171,7 +171,7 @@ export default function WebsiteBuilder() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to generate website. Please try again.",
+        description: "Failed to submit your information. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -194,8 +194,8 @@ export default function WebsiteBuilder() {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">Build Your Website</h1>
-          <p className="text-muted-foreground">Create a professional website in minutes</p>
+          <h1 className="text-4xl font-bold mb-2">Business Information Form</h1>
+          <p className="text-muted-foreground">Submit your business details for website creation</p>
         </div>
 
         {/* Progress Bar */}
@@ -217,8 +217,8 @@ export default function WebsiteBuilder() {
             </CardTitle>
             <CardDescription>
               {currentStep === 1 && 'Tell us about your business'}
-              {currentStep === 2 && 'Choose your website design'}
-              {currentStep === 3 && 'Add your website content'}
+              {currentStep === 2 && 'Choose your design preferences'}
+              {currentStep === 3 && 'Add your content details'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -569,7 +569,7 @@ export default function WebsiteBuilder() {
                 onClick={handleSubmit} 
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Generating Website...' : 'Generate Website'}
+                {isSubmitting ? 'Submitting...' : 'Submit Information'}
               </Button>
             )}
           </div>

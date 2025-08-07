@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { v4 as uuidv4 } from 'uuid'
-import { contentGenerator } from '@/lib/ai/content-generator'
+import { Client } from '@notionhq/client'
+
+// Initialize Notion client
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN,
+})
 
 interface WebsiteBuilderData {
   businessInfo: {
@@ -43,180 +46,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create or get user (for demo, we'll create a simple user)
-    let user = await db.user.findUnique({
-      where: { email: data.businessInfo.email }
-    })
-
-    if (!user) {
-      user = await db.user.create({
-        data: {
-          id: uuidv4(),
-          email: data.businessInfo.email,
-          name: data.businessInfo.businessName
-        }
-      })
-    }
-
-    // Create a default template if it doesn't exist
-    let template = await db.template.findUnique({
-      where: { id: data.designPreferences.template }
-    })
-
-    if (!template) {
-      template = await db.template.create({
-        data: {
-          id: data.designPreferences.template,
-          name: `${data.designPreferences.template.charAt(0).toUpperCase() + data.designPreferences.template.slice(1)} Template`,
-          category: 'default',
-          config: JSON.stringify({
-            primaryColor: data.designPreferences.primaryColor,
-            secondaryColor: data.designPreferences.secondaryColor,
-            layout: data.designPreferences.layout,
-            style: data.designPreferences.style
-          })
-        }
-      })
-    }
-
-    // Generate unique subdomain
-    const subdomain = `${data.businessInfo.businessName.toLowerCase().replace(/\s+/g, '-')}-${uuidv4().slice(0, 8)}`
-
-    // Generate enhanced content using AI
-    let enhancedContent
-    let seoContent
-    
-    try {
-      enhancedContent = await contentGenerator.enhanceBusinessContent(
-        data.businessInfo,
-        data.websiteContent,
-        data.designPreferences
-      )
-      
-      seoContent = await contentGenerator.generateSeoContent(
-        data.businessInfo,
-        enhancedContent
-      )
-    } catch (aiError) {
-      console.error('AI content generation failed, using fallback:', aiError)
-      // Use basic content generation as fallback
-      enhancedContent = {
-        heroTitle: data.businessInfo.businessName,
-        heroSubtitle: data.businessInfo.description,
-        aboutContent: data.businessInfo.description,
-        serviceDescriptions: data.websiteContent.services.split('\n').filter(s => s.trim()),
-        productDescriptions: data.websiteContent.products.split('\n').filter(p => p.trim()),
-        metaDescription: data.businessInfo.description,
-        keywords: [data.businessInfo.industry],
-        callToAction: 'Contact Us Today'
-      }
-      
-      seoContent = {
-        title: `${data.businessInfo.businessName} - ${data.businessInfo.industry}`,
-        description: data.businessInfo.description,
-        keywords: [data.businessInfo.industry],
-        schema: {}
+    // Save data to Notion database
+    let notionResult = null
+    if (process.env.NOTION_TOKEN && process.env.NOTION_DATABASE_ID) {
+      try {
+        notionResult = await saveToNotion(data)
+      } catch (notionError) {
+        console.error('Failed to save to Notion:', notionError)
       }
     }
 
-    // Create website with enhanced content
-    const website = await db.website.create({
-      data: {
-        id: uuidv4(),
-        name: data.businessInfo.businessName,
-        subdomain,
-        status: 'DRAFT',
-        templateId: template.id,
-        userId: user.id,
-        business: {
-          create: {
-            id: uuidv4(),
-            businessName: data.businessInfo.businessName,
-            description: data.businessInfo.description,
-            industry: data.businessInfo.industry,
-            email: data.businessInfo.email,
-            phone: data.businessInfo.phone,
-            address: data.businessInfo.address,
-            city: data.businessInfo.city,
-            state: data.businessInfo.state,
-            zipCode: data.businessInfo.zipCode,
-            country: data.businessInfo.country,
-            hours: JSON.stringify({
-              operatingHours: data.websiteContent.hours
-            }),
-            services: JSON.stringify({
-              services: enhancedContent.serviceDescriptions
-            }),
-            products: JSON.stringify({
-              products: enhancedContent.productDescriptions
-            })
-          }
-        },
-        content: {
-          create: {
-            id: uuidv4(),
-            homepage: JSON.stringify({
-              heroTitle: enhancedContent.heroTitle,
-              heroSubtitle: enhancedContent.heroSubtitle,
-              features: data.websiteContent.features.split(',').map(f => f.trim()),
-              callToAction: enhancedContent.callToAction
-            }),
-            about: enhancedContent.aboutContent,
-            contact: JSON.stringify({
-              email: data.businessInfo.email,
-              phone: data.businessInfo.phone,
-              address: `${data.businessInfo.address}, ${data.businessInfo.city}, ${data.businessInfo.state} ${data.businessInfo.zipCode}`
-            }),
-            services: JSON.stringify({
-              services: enhancedContent.serviceDescriptions
-            }),
-            products: JSON.stringify({
-              products: enhancedContent.productDescriptions
-            }),
-            seo: JSON.stringify({
-              title: seoContent.title,
-              description: seoContent.description,
-              keywords: seoContent.keywords,
-              schema: seoContent.schema
-            }),
-            customCss: `:root { --primary-color: ${data.designPreferences.primaryColor}; --secondary-color: ${data.designPreferences.secondaryColor}; }`
-          }
-        }
+    // Post data to N8N webhook
+    let webhookResult = null
+    if (process.env.N8N_WEBHOOK_URL) {
+      try {
+        webhookResult = await postToN8NWebhook(data)
+      } catch (webhookError) {
+        console.error('Failed to post to N8N webhook:', webhookError)
       }
-    })
-
-    // Create deployment record
-    const deployment = await db.deployment.create({
-      data: {
-        id: uuidv4(),
-        websiteId: website.id,
-        userId: user.id,
-        status: 'PENDING'
-      }
-    })
-
-    // TODO: Trigger website generation process (this would be handled by a background job)
-    // For now, we'll simulate the process
-    try {
-      // Simulate website generation
-      await simulateWebsiteGeneration(website.id, deployment.id)
-    } catch (error) {
-      console.error('Website generation failed:', error)
-      await db.deployment.update({
-        where: { id: deployment.id },
-        data: { status: 'FAILED', logs: JSON.stringify({ error: 'Generation failed' }) }
-      })
     }
 
     return NextResponse.json({
       success: true,
-      websiteId: website.id,
-      deploymentId: deployment.id,
-      message: 'Website generation started successfully'
+      notionResult,
+      webhookResult,
+      message: 'Data processed successfully'
     })
 
   } catch (error) {
-    console.error('Error generating website:', error)
+    console.error('Error processing request:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -224,30 +82,145 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Simulate website generation process
-async function simulateWebsiteGeneration(websiteId: string, deploymentId: string) {
-  // Update status to building
-  await db.deployment.update({
-    where: { id: deploymentId },
-    data: { status: 'BUILDING' }
+// Save data to Notion database
+async function saveToNotion(data: WebsiteBuilderData) {
+  const pageData = {
+    parent: {
+      database_id: process.env.NOTION_DATABASE_ID!,
+    },
+    properties: {
+      BusinessName: {
+        title: [
+          {
+            text: {
+              content: data.businessInfo.businessName,
+            },
+          },
+        ],
+      },
+      Description: {
+        rich_text: [
+          {
+            text: {
+              content: data.businessInfo.description,
+            },
+          },
+        ],
+      },
+      Industry: {
+        select: {
+          name: data.businessInfo.industry,
+        },
+      },
+      Email: {
+        email: data.businessInfo.email,
+      },
+      Phone: {
+        phone_number: data.businessInfo.phone,
+      },
+      Address: {
+        rich_text: [
+          {
+            text: {
+              content: `${data.businessInfo.address}, ${data.businessInfo.city}, ${data.businessInfo.state} ${data.businessInfo.zipCode}, ${data.businessInfo.country}`,
+            },
+          },
+        ],
+      },
+      PrimaryColor: {
+        rich_text: [
+          {
+            text: {
+              content: data.designPreferences.primaryColor,
+            },
+          },
+        ],
+      },
+      SecondaryColor: {
+        rich_text: [
+          {
+            text: {
+              content: data.designPreferences.secondaryColor,
+            },
+          },
+        ],
+      },
+      Template: {
+        select: {
+          name: data.designPreferences.template,
+        },
+      },
+      Services: {
+        rich_text: [
+          {
+            text: {
+              content: data.websiteContent.services,
+            },
+          },
+        ],
+      },
+      Products: {
+        rich_text: [
+          {
+            text: {
+              content: data.websiteContent.products,
+            },
+          },
+        ],
+      },
+      Hours: {
+        rich_text: [
+          {
+            text: {
+              content: data.websiteContent.hours,
+            },
+          },
+        ],
+      },
+      Features: {
+        rich_text: [
+          {
+            text: {
+              content: data.websiteContent.features,
+            },
+          },
+        ],
+      },
+      CreatedAt: {
+        date: {
+          start: new Date().toISOString(),
+        },
+      },
+    },
+  }
+
+  const response = await notion.pages.create(pageData)
+  return response
+}
+
+// Post data to N8N webhook
+async function postToN8NWebhook(data: WebsiteBuilderData) {
+  const webhookUrl = process.env.N8N_WEBHOOK_URL!
+  
+  const payload = {
+    businessInfo: data.businessInfo,
+    designPreferences: data.designPreferences,
+    websiteContent: data.websiteContent,
+    timestamp: new Date().toISOString(),
+    source: 'website-builder-form'
+  }
+
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   })
 
-  // Simulate processing time
-  await new Promise(resolve => setTimeout(resolve, 2000))
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
 
-  // Update website status
-  await db.website.update({
-    where: { id: websiteId },
-    data: { status: 'READY' }
-  })
-
-  // Update deployment status
-  await db.deployment.update({
-    where: { id: deploymentId },
-    data: { 
-      status: 'SUCCESS',
-      url: `https://${(await db.website.findUnique({ where: { id: websiteId } }))?.subdomain}.example.com`,
-      deployedAt: new Date()
-    }
-  })
+  return await response.json()
 }
