@@ -1,141 +1,202 @@
-# 🚀 Welcome to Z.ai Code Scaffold
+# Website Builder Form
 
-A modern, production-ready web application scaffold powered by cutting-edge technologies, designed to accelerate your development with [Z.ai](https://chat.z.ai)'s AI-powered coding assistance.
+A simple web application that collects business information and submits it to a Notion database and N8N webhook.
 
-## ✨ Technology Stack
+## Features
 
-This scaffold provides a robust foundation built with:
+- **Multi-step form** for collecting business information, design preferences, and content
+- **Notion integration** to save form data to a Notion database
+- **N8N webhook** integration to trigger automated workflows
+- **Responsive design** with modern UI components
+- **Form validation** with real-time error handling
 
-### 🎯 Core Framework
-- **⚡ Next.js 15** - The React framework for production with App Router
-- **📘 TypeScript 5** - Type-safe JavaScript for better developer experience
-- **🎨 Tailwind CSS 4** - Utility-first CSS framework for rapid UI development
+## Tech Stack
 
-### 🧩 UI Components & Styling
-- **🧩 shadcn/ui** - High-quality, accessible components built on Radix UI
-- **🎯 Lucide React** - Beautiful & consistent icon library
-- **🌈 Framer Motion** - Production-ready motion library for React
-- **🎨 Next Themes** - Perfect dark mode in 2 lines of code
+- **Frontend**: Next.js 15 with TypeScript
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **Form Handling**: React Hook Form with Zod validation
+- **API Integration**: Notion API client
+- **Deployment**: Vercel/Netlify ready
 
-### 📋 Forms & Validation
-- **🎣 React Hook Form** - Performant forms with easy validation
-- **✅ Zod** - TypeScript-first schema validation
+## Setup Instructions
 
-### 🔄 State Management & Data Fetching
-- **🐻 Zustand** - Simple, scalable state management
-- **🔄 TanStack Query** - Powerful data synchronization for React
-- **🌐 Axios** - Promise-based HTTP client
-
-### 🗄️ Database & Backend
-- **🗄️ Prisma** - Next-generation Node.js and TypeScript ORM
-- **🔐 NextAuth.js** - Complete open-source authentication solution
-
-### 🎨 Advanced UI Features
-- **📊 TanStack Table** - Headless UI for building tables and datagrids
-- **🖱️ DND Kit** - Modern drag and drop toolkit for React
-- **📊 Recharts** - Redefined chart library built with React and D3
-- **🖼️ Sharp** - High performance image processing
-
-### 🌍 Internationalization & Utilities
-- **🌍 Next Intl** - Internationalization library for Next.js
-- **📅 Date-fns** - Modern JavaScript date utility library
-- **🪝 ReactUse** - Collection of essential React hooks for modern development
-
-## 🎯 Why This Scaffold?
-
-- **🏎️ Fast Development** - Pre-configured tooling and best practices
-- **🎨 Beautiful UI** - Complete shadcn/ui component library with advanced interactions
-- **🔒 Type Safety** - Full TypeScript configuration with Zod validation
-- **📱 Responsive** - Mobile-first design principles with smooth animations
-- **🗄️ Database Ready** - Prisma ORM configured for rapid backend development
-- **🔐 Auth Included** - NextAuth.js for secure authentication flows
-- **📊 Data Visualization** - Charts, tables, and drag-and-drop functionality
-- **🌍 i18n Ready** - Multi-language support with Next Intl
-- **🚀 Production Ready** - Optimized build and deployment settings
-- **🤖 AI-Friendly** - Structured codebase perfect for AI assistance
-
-## 🚀 Quick Start
+### 1. Clone the Repository
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
+git clone https://github.com/henryroman/website-builder.git
+cd website-builder
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your application running.
+### 2. Install Dependencies
 
-## 🤖 Powered by Z.ai
+```bash
+npm install
+```
 
-This scaffold is optimized for use with [Z.ai](https://chat.z.ai) - your AI assistant for:
+### 3. Environment Variables
 
-- **💻 Code Generation** - Generate components, pages, and features instantly
-- **🎨 UI Development** - Create beautiful interfaces with AI assistance  
-- **🔧 Bug Fixing** - Identify and resolve issues with intelligent suggestions
-- **📝 Documentation** - Auto-generate comprehensive documentation
-- **🚀 Optimization** - Performance improvements and best practices
+Create a `.env.local` file in the root directory:
 
-Ready to build something amazing? Start chatting with Z.ai at [chat.z.ai](https://chat.z.ai) and experience the future of AI-powered development!
+```bash
+cp .env.example .env.local
+```
 
-## 📁 Project Structure
+Add your environment variables:
+
+```env
+# Notion Integration
+NOTION_TOKEN=your_notion_integration_token_here
+NOTION_DATABASE_ID=your_notion_database_id_here
+
+# N8N Webhook Integration
+N8N_WEBHOOK_URL=your_n8n_webhook_url_here
+
+# Database (if needed for future use)
+DATABASE_URL="file:./dev.db"
+```
+
+### 4. Notion Setup
+
+1. Create a Notion integration at [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations)
+2. Create a new database in Notion with the following properties:
+   - **BusinessName** (Title)
+   - **Description** (Rich Text)
+   - **Industry** (Select)
+   - **Email** (Email)
+   - **Phone** (Phone Number)
+   - **Address** (Rich Text)
+   - **PrimaryColor** (Rich Text)
+   - **SecondaryColor** (Rich Text)
+   - **Template** (Select)
+   - **Services** (Rich Text)
+   - **Products** (Rich Text)
+   - **Hours** (Rich Text)
+   - **Features** (Rich Text)
+   - **CreatedAt** (Date)
+3. Share the database with your integration
+4. Copy the integration token and database ID to your `.env.local` file
+
+### 5. N8N Setup
+
+1. Set up an N8N instance (self-hosted or cloud)
+2. Create a new workflow with a Webhook trigger
+3. Copy the webhook URL to your `.env.local` file
+4. Configure your workflow to process the form data
+
+### 6. Run the Development Server
+
+```bash
+npm run dev
+```
+
+Visit [http://localhost:3000](http://localhost:3000) to view the application.
+
+## Project Structure
 
 ```
 src/
-├── app/                 # Next.js App Router pages
-├── components/          # Reusable React components
-│   └── ui/             # shadcn/ui components
-├── hooks/              # Custom React hooks
-└── lib/                # Utility functions and configurations
+├── app/
+│   ├── api/
+│   │   └── websites/
+│   │       └── generate/
+│   │           └── route.ts    # API endpoint for form submission
+│   ├── website-builder/
+│   │   └── page.tsx           # Multi-step form component
+│   ├── page.tsx               # Homepage
+│   └── layout.tsx             # Root layout
+├── components/
+│   └── ui/                    # shadcn/ui components
+└── lib/
+    └── db/                    # Database utilities (if needed)
 ```
 
-## 🎨 Available Features & Components
+## API Endpoints
 
-This scaffold includes a comprehensive set of modern web development tools:
+### POST `/api/websites/generate`
 
-### 🧩 UI Components (shadcn/ui)
-- **Layout**: Card, Separator, Aspect Ratio, Resizable Panels
-- **Forms**: Input, Textarea, Select, Checkbox, Radio Group, Switch
-- **Feedback**: Alert, Toast (Sonner), Progress, Skeleton
-- **Navigation**: Breadcrumb, Menubar, Navigation Menu, Pagination
-- **Overlay**: Dialog, Sheet, Popover, Tooltip, Hover Card
-- **Data Display**: Badge, Avatar, Calendar
+Submits form data to Notion database and N8N webhook.
 
-### 📊 Advanced Data Features
-- **Tables**: Powerful data tables with sorting, filtering, pagination (TanStack Table)
-- **Charts**: Beautiful visualizations with Recharts
-- **Forms**: Type-safe forms with React Hook Form + Zod validation
+**Request Body:**
+```json
+{
+  "businessInfo": {
+    "businessName": "string",
+    "description": "string",
+    "industry": "string",
+    "email": "string",
+    "phone": "string",
+    "address": "string",
+    "city": "string",
+    "state": "string",
+    "zipCode": "string",
+    "country": "string"
+  },
+  "designPreferences": {
+    "primaryColor": "string",
+    "secondaryColor": "string",
+    "template": "string",
+    "layout": "string",
+    "style": "string"
+  },
+  "websiteContent": {
+    "services": "string",
+    "products": "string",
+    "hours": "string",
+    "features": "string"
+  }
+}
+```
 
-### 🎨 Interactive Features
-- **Animations**: Smooth micro-interactions with Framer Motion
-- **Drag & Drop**: Modern drag-and-drop functionality with DND Kit
-- **Theme Switching**: Built-in dark/light mode support
+**Response:**
+```json
+{
+  "success": true,
+  "notionResult": {},
+  "webhookResult": {},
+  "message": "Data processed successfully"
+}
+```
 
-### 🔐 Backend Integration
-- **Authentication**: Ready-to-use auth flows with NextAuth.js
-- **Database**: Type-safe database operations with Prisma
-- **API Client**: HTTP requests with Axios + TanStack Query
-- **State Management**: Simple and scalable with Zustand
+## Form Flow
 
-### 🌍 Production Features
-- **Internationalization**: Multi-language support with Next Intl
-- **Image Optimization**: Automatic image processing with Sharp
-- **Type Safety**: End-to-end TypeScript with Zod validation
-- **Essential Hooks**: 100+ useful React hooks with ReactUse for common patterns
+1. **Business Information**: Collect basic business details (name, description, contact info, address)
+2. **Design Preferences**: Choose template, layout, style, and colors
+3. **Website Content**: Add services, products, operating hours, and features
 
-## 🤝 Get Started with Z.ai
+## Deployment
 
-1. **Clone this scaffold** to jumpstart your project
-2. **Visit [chat.z.ai](https://chat.z.ai)** to access your AI coding assistant
-3. **Start building** with intelligent code generation and assistance
-4. **Deploy with confidence** using the production-ready setup
+### Vercel
 
----
+1. Connect your GitHub repository to Vercel
+2. Add environment variables in Vercel dashboard
+3. Deploy automatically on push
 
-Built with ❤️ for the developer community. Supercharged by [Z.ai](https://chat.z.ai) 🚀
+### Other Platforms
+
+The application can be deployed to any platform that supports Next.js:
+
+- Netlify
+- Railway
+- DigitalOcean App Platform
+- AWS Amplify
+
+## Error Handling
+
+The application includes comprehensive error handling:
+
+- Form validation with real-time feedback
+- Graceful fallback if Notion or N8N services are unavailable
+- User-friendly error messages
+- Detailed logging for debugging
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
