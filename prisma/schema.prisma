@@ -19,14 +19,112 @@ model User {
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  websites  Website[]
+  deployments Deployment[]
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Website {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String?
+  subdomain   String?
+  status      WebsiteStatus @default(DRAFT)
+  templateId  String
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template    Template     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  business    BusinessInfo?
+  content     WebsiteContent?
+  deployments Deployment[]
+  
+  @@unique([subdomain])
+}
+
+model BusinessInfo {
+  id          String   @id @default(cuid())
+  websiteId   String   @unique
+  businessName String
+  description String?
+  industry    String?
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  country     String?
+  hours       String? // JSON string for operating hours
+  services    String? // JSON string for services
+  products    String? // JSON string for products
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  website     Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+}
+
+model WebsiteContent {
+  id          String   @id @default(cuid())
+  websiteId   String   @unique
+  homepage    String?  // JSON content structure
+  about       String?
+  contact     String?
+  services    String?  // JSON string
+  products    String?  // JSON string
+  seo         String?  // JSON string for SEO metadata
+  customCss   String?
+  customJs    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  website     Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String
+  previewUrl  String?
+  config      String   // JSON string for template configuration
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  websites    Website[]
+}
+
+model Deployment {
+  id          String       @id @default(cuid())
+  websiteId   String
+  userId      String
+  status      DeploymentStatus @default(PENDING)
+  url         String?
+  logs        String?
+  deployedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  website     Website      @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum WebsiteStatus {
+  DRAFT
+  GENERATING
+  READY
+  PUBLISHED
+  ARCHIVED
+}
+
+enum DeploymentStatus {
+  PENDING
+  BUILDING
+  DEPLOYING
+  SUCCESS
+  FAILED
+  CANCELLED
 }
